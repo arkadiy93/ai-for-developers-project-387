@@ -4,8 +4,6 @@
 
 Разработайте совместно с ИИ сервис для бронирования календаря
 
-**Приложение:** https://ai-for-developers-project-386.onrender.com
-
 Учебный проект Хекслета: https://ru.hexlet.io/programs/ai-for-developers
 Как это должно работать: https://files.hexlet.app/a/2ipc5m
 

@@ -1,0 +1,9 @@
+# Render Blueprint: one free web service built from the root Dockerfile. Render sets PORT.
+services:
+  - type: web
+    name: ai-for-developers-project-386
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/event-types
+    autoDeploy: true

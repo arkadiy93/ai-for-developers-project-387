@@ -1,0 +1,374 @@
+openapi: 3.0.0
+info:
+  title: Call Calendar API
+  description: Call Calendar API. Every route lives under `/api`.
+  version: 0.0.0
+tags:
+  - name: Event Types
+  - name: Bookings
+paths:
+  /bookings:
+    get:
+      operationId: Bookings_list
+      description: |-
+        Every Booking that hasn't ended yet, so a call in progress stays until its end, sorted by
+        start. There is no paging.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+      tags:
+        - Bookings
+    post:
+      operationId: Bookings_create
+      description: |-
+        Books a free Slot. Any start that isn't a free Slot right now (taken by a Booking of any
+        Event Type, past, outside the Booking Window or Working Hours, off the quarter hour) is a
+        409 `SLOT_UNAVAILABLE`. An unknown Event Type is a 404 `EVENT_TYPE_NOT_FOUND`.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingInput'
+  /event-types:
+    get:
+      operationId: EventTypes_list
+      description: Every Event Type, sorted by name.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventType'
+      tags:
+        - Event Types
+    post:
+      operationId: EventTypes_create
+      description: Creates an Event Type. A blank name or a duration that isn't a multiple of 15 is a 400.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Event Types
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventTypeInput'
+  /event-types/{id}:
+    put:
+      operationId: EventTypes_update
+      description: |-
+        Replaces the Event Type's fields, with the same rules as create. The id never changes.
+        Existing Bookings keep their own name and time (ADR 0004).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Event Types
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventTypeInput'
+    delete:
+      operationId: EventTypes_delete
+      description: Hard-deletes the Event Type. Its Bookings remain (ADR 0004). An unknown id is a 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Event Types
+  /event-types/{id}/slots:
+    get:
+      operationId: EventTypes_slots
+      description: Every start of the Event Type in the Booking Window, each marked available or not.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Slots'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - Event Types
+components:
+  schemas:
+    Booking:
+      type: object
+      required:
+        - id
+        - eventTypeId
+        - eventTypeName
+        - start
+        - end
+        - guestName
+        - guestEmail
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated.
+        eventTypeId:
+          type: string
+          description: May point at an Event Type that has since been deleted.
+        eventTypeName:
+          type: string
+        start:
+          type: string
+          format: date-time
+          description: Serialised exactly like `Date#toISOString()`.
+        end:
+          type: string
+          format: date-time
+          description: Serialised exactly like `Date#toISOString()`.
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+      description: A Guest's call of one Event Type. Its Event Type name and end are fixed when it is made (ADR 0004).
+    BookingInput:
+      type: object
+      required:
+        - eventTypeId
+        - start
+        - guestName
+        - guestEmail
+      properties:
+        eventTypeId:
+          type: string
+          description: An id that no Event Type has is a 404, like the `/event-types/{id}` routes.
+        start:
+          type: string
+          format: date-time
+          description: Must be a free Slot of the Event Type right now, or the request is a 409.
+        guestName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Must contain a non-space character. The server trims it before saving.
+        guestEmail:
+          type: string
+          maxLength: 254
+          format: email
+          description: The server trims it before saving.
+      description: What a Guest sends to book a call.
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: A stable machine-readable code, for example `VALIDATION_ERROR` or `NOT_FOUND`.
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+      description: The body of every 4xx and 5xx response.
+    ErrorDetail:
+      type: object
+      required:
+        - path
+        - message
+      properties:
+        path:
+          type: string
+          description: JSON pointer to the field, for example `/durationMinutes`.
+        message:
+          type: string
+      description: A field that failed validation.
+    EventType:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - durationMinutes
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-generated.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Must contain a non-space character. The server trims it before saving.
+        description:
+          type: string
+          maxLength: 500
+          description: May be empty. The server trims it before saving.
+        durationMinutes:
+          type: integer
+          format: int32
+          minimum: 15
+          maximum: 540
+          description: The length of the call. Must be a multiple of 15.
+      description: A kind of call the Owner offers.
+    EventTypeInput:
+      type: object
+      required:
+        - name
+        - description
+        - durationMinutes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Must contain a non-space character. The server trims it before saving.
+        description:
+          type: string
+          maxLength: 500
+          description: May be empty. The server trims it before saving.
+        durationMinutes:
+          type: integer
+          format: int32
+          minimum: 15
+          maximum: 540
+          description: The length of the call. Must be a multiple of 15.
+      description: The fields of an Event Type that the Owner sets.
+    SlotDay:
+      type: object
+      required:
+        - date
+        - starts
+      properties:
+        date:
+          type: string
+          format: date
+        starts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotStart'
+      description: One day of the Booking Window, with every quarter-hour start whose call ends by 18:00 UTC.
+    SlotStart:
+      type: object
+      required:
+        - start
+        - available
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Serialised exactly like `Date#toISOString()`.
+        available:
+          type: boolean
+          description: False when the start is past or the call would overlap a Booking.
+      description: One possible start time for an Event Type.
+    Slots:
+      type: object
+      required:
+        - days
+      properties:
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotDay'
+      description: The 14 days of the Booking Window, starting today in UTC.
+servers:
+  - url: /api
+    description: Call Calendar API
+    variables: {}

@@ -63,7 +63,7 @@ function DayPicker({ days, onSelect }: { days: SlotDay[]; onSelect: (start: stri
 
   return (
     <>
-      <ul aria-label="Days" className="flex gap-2 overflow-x-auto pb-1">
+      <ul aria-label="Days" className="flex gap-2 overflow-x-auto p-1">
         {days.map((day) => (
           <li key={day.date} className="shrink-0">
             <button

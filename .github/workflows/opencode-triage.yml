@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
+      pull-requests: write
       issues: write
     steps:
       - name: Checkout repository
@@ -17,6 +18,15 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
@@ -26,14 +36,15 @@ jobs:
         with:
           model: anthropic/claude-haiku-5-5
           prompt: |
-            Triage the newly opened issue #${{ github.event.issue.number }}. Do not change any code and do not open a pull request.
+            Triage the newly opened issue #${{ github.event.issue.number }}, and fix it if it is fully specified.
 
             1. Read the issue with `gh issue view ${{ github.event.issue.number }} --json title,body,labels`.
-            2. Read `docs/agents/triage-labels.md`, `GLOSSARY.md` and the code the issue refers to, enough to judge it.
+            2. Read `AGENTS.md`, `docs/agents/triage-labels.md`, `GLOSSARY.md` and the code the issue refers to, enough to judge it.
             3. Apply exactly one triage label with `gh issue edit ${{ github.event.issue.number }} --add-label <label>`:
                - `needs-info` if the problem, expected behaviour or steps to reproduce are missing;
                - `ready-for-agent` if it is fully specified and small enough for an AI agent to implement unattended;
                - `ready-for-human` if it needs a design decision, credentials or manual work;
                - `needs-triage` if you cannot decide.
                Also add one of `bug`, `enhancement`, `documentation` or `question` if it clearly fits.
-            4. Reply with a short comment: a one-sentence summary, the label you chose and why, and for `needs-info` the exact questions the reporter should answer.
+            4. Only if you applied `ready-for-agent`: implement the fix following `AGENTS.md`, add or update tests, and make `pnpm format`, `pnpm lint`, `pnpm typecheck` and `pnpm test` pass. Leave the changes uncommitted: the workflow commits them to a new branch and opens a pull request. For every other label, change no files.
+            5. Reply with a short comment: a one-sentence summary, the label you chose and why, for `needs-info` the exact questions the reporter should answer, and for `ready-for-agent` what you changed.

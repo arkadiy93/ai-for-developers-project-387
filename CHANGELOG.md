@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/arkadiy93/ai-for-developers-project-387/compare/v0.4.0...v0.4.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **ci:** use claude-haiku-5-5 in opencode workflow ([6915d6d](https://github.com/arkadiy93/ai-for-developers-project-387/commit/6915d6dbbf33db48aa186bde2e00ddedd3044729))
+* **ci:** use claude-sonnet-5-5 in opencode workflow ([74bbdd5](https://github.com/arkadiy93/ai-for-developers-project-387/commit/74bbdd5e1cd0b860b66983a5aac73e4d5914faca))
+
 ## [0.4.0](https://github.com/arkadiy93/ai-for-developers-project-386/compare/v0.3.0...v0.4.0) (2026-10-15)
 
 

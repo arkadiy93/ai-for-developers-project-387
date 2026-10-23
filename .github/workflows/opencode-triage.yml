@@ -1,0 +1,39 @@
+name: opencode-triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        with:
+          model: anthropic/claude-haiku-5-5
+          prompt: |
+            Triage the newly opened issue #${{ github.event.issue.number }}. Do not change any code and do not open a pull request.
+
+            1. Read the issue with `gh issue view ${{ github.event.issue.number }} --json title,body,labels`.
+            2. Read `docs/agents/triage-labels.md`, `GLOSSARY.md` and the code the issue refers to, enough to judge it.
+            3. Apply exactly one triage label with `gh issue edit ${{ github.event.issue.number }} --add-label <label>`:
+               - `needs-info` if the problem, expected behaviour or steps to reproduce are missing;
+               - `ready-for-agent` if it is fully specified and small enough for an AI agent to implement unattended;
+               - `ready-for-human` if it needs a design decision, credentials or manual work;
+               - `needs-triage` if you cannot decide.
+               Also add one of `bug`, `enhancement`, `documentation` or `question` if it clearly fits.
+            4. Reply with a short comment: a one-sentence summary, the label you chose and why, and for `needs-info` the exact questions the reporter should answer.
